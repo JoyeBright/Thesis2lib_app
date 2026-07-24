@@ -37,9 +37,9 @@ Example row:
 
 ```yaml
 "127052":
-  student_name: Liang, Madison
+  student_name: Bright, Javad
   canvas_url: https://.../courses/18991/gradebook/speed_grader?assignment_id=156731&student_id=127052
-  snr: "2112318"
+  snr: "3232323"
   selected_pdf: Final_Thesis.pdf
   detected_revision: "(none)"
   extracted_title: Predicting European Scientific Excellence...
