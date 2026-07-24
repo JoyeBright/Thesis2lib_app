@@ -1,0 +1,19 @@
+# Conda dependency specification for Thesis2Lib.
+# Use setup_conda.sh to create the local .conda/ environment.
+# (Older Conda releases fail when using "conda env create -f" with prefix: .conda)
+
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.13
+  - pandas>=2.0
+  - openpyxl>=3.1
+  - requests>=2.31
+  - python-dateutil>=2.8
+  - pyyaml>=6.0
+  - pypdf>=5.0
+  - wordninja>=2.0
+  - pypdfium2>=4.0
+  - pillow>=10.0
+  - pytesseract>=0.3
+  - tesseract>=5.0

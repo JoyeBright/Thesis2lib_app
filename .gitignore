@@ -1,0 +1,8 @@
+.conda/
+config.yml
+__pycache__/
+*.py[cod]
+*.egg-info/
+.DS_Store
+.write_test
+Processing_Report.xlsx

@@ -1,0 +1,18 @@
+# Copy to config.yml and edit for your programme/semester.
+# Never put Canvas API tokens or passwords in this file.
+
+canvas_url: https://tilburguniversity.instructure.com/
+course_id: 18991
+# Canvas assignment IDs for the 1st and 2nd submission slots (two opportunities only):
+first_assignment_id: 156730
+second_assignment_id: 156731
+
+programme: MSc_DSS
+semester: F2025
+pass_threshold: 60
+
+# Optional folder paths (can also be passed on the command line):
+# first_pdf_folder: /path/to/First Submission
+# second_pdf_folder: /path/to/Second Submission
+# output_folder: /path/to/Output
+# overview_file: /path/to/Overview_F2025.xlsx
