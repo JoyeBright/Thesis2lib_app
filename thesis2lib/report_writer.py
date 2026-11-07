@@ -35,6 +35,7 @@ from thesis2lib.models import ProcessedStudent, SubmissionRecord
 from thesis2lib.package_writer import delivery_package_is_eligible, pdf_package_is_eligible
 from thesis2lib.submissions import has_real_submission
 from thesis2lib.scoring import (
+    format_course_final_grade_ten_scale,
     format_student_final_score_course,
     format_student_override_score_course,
     format_submission_score_course,
@@ -228,8 +229,9 @@ def student_report_row(item: ProcessedStudent) -> dict[str, Any]:
             not_applicable=second_not_applicable,
         ),
         "Final attempt": item.final_attempt or "",
-        "Final Score": format_student_final_score_course(item.student),
-        "Override Score": format_student_override_score_course(item.student),
+        "1st assignment (0-10)": format_student_final_score_course(item.student),
+        "2nd assignment (0-10)": format_student_override_score_course(item.student),
+        "Course final (0-10)": format_course_final_grade_ten_scale(item.student),
         "Course Result": item.student.course_result,
         "PDF source": pdf.pdf_source if pdf else "",
         "Canvas attachment names": "; ".join(pdf.canvas_attachment_names) if pdf else "",

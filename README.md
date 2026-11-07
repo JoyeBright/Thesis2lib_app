@@ -29,7 +29,9 @@ Pass **5.5** on 0–10 maps automatically (e.g. **33/60** on a 0–60 assignment
 
 Optional overrides in `config.yml`: `submission_score_max`, `gradebook_score_max`, `course_grade_max`, `course_pass_grade`.
 
-Outputs that show **Final Score / Override Score / course final grade** use the **0–10 course scale** after conversion.
+**Course final grade, pass/fail, and library delivery** use only the **1st and 2nd thesis assignment scores** from Canvas (latest attempt for the final grade). The Canvas **course gradebook total** (Final/Override on 0–100) is **not** used.
+
+Each assignment is converted from its assignment max (from `points_possible`, often **60**) to **0–10**. The **Grade Summary** in `Assessments.xlsx` lists **1st/2nd assignment** raw scores, joint Canvas data, and overview rows for reference.
 
 ## Run
 

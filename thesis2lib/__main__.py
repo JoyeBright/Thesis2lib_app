@@ -213,13 +213,7 @@ def main(argv: list[str] | None = None) -> int:
 
         step += 1
         with pipeline_step(step, step_total, "Writing Canvas gradebook") as progress:
-            derived_scores = {
-                item.student.canvas_id: (
-                    item.student.final_score,
-                    item.student.override_score,
-                )
-                for item in students
-            }
+            derived_scores = None
             write_gradebook(
                 client,
                 args.course_id,

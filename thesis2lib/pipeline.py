@@ -274,24 +274,20 @@ def process_students(
         second = second_submissions.get(student.canvas_id)
 
         from thesis2lib.scoring import (
+            apply_assignment_scores,
             apply_last_submission_grade,
-            choose_last_submission_score,
-            fill_missing_gradebook_scores,
         )
 
+        apply_assignment_scores(
+            student,
+            first.raw if first else None,
+            second.raw if second else None,
+        )
         apply_last_submission_grade(
             student,
             first.raw if first else None,
             second.raw if second else None,
         )
-
-        if student.final_score is None or student.override_score is None:
-            submission_score, _ = choose_last_submission_score(
-                first.raw if first else None,
-                second.raw if second else None,
-            )
-            if submission_score is not None:
-                fill_missing_gradebook_scores(student, submission_score)
 
         student.course_result = determine_course_result(
             student,

@@ -17,6 +17,8 @@ class StudentRecord:
     official_score: float | None
     official_score_source: str
     course_result: str
+    first_assignment_score: float | None = None
+    second_assignment_score: float | None = None
 
 
 @dataclass

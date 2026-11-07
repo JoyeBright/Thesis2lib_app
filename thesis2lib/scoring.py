@@ -57,19 +57,59 @@ def resolve_override_score(student: StudentRecord) -> float | None:
     return None
 
 
+def assignment_score_from_submission(submission: dict | None) -> float | None:
+    if not has_real_submission(submission):
+        return None
+    return parse_score(submission.get("score"))
+
+
+def apply_assignment_scores(
+    student: StudentRecord,
+    first_submission: dict | None,
+    second_submission: dict | None,
+) -> None:
+    """Store raw Canvas scores for the 1st and 2nd thesis assignments only."""
+    first = assignment_score_from_submission(first_submission)
+    second = assignment_score_from_submission(second_submission)
+    if first is not None:
+        student.first_assignment_score = round_grade_2dp(first)
+    if second is not None:
+        student.second_assignment_score = round_grade_2dp(second)
+
+
+def latest_assignment_score(student: StudentRecord) -> float | None:
+    """Prefer 2nd assignment score, else 1st — not the course gradebook total."""
+    if student.second_assignment_score is not None:
+        return student.second_assignment_score
+    if student.first_assignment_score is not None:
+        return student.first_assignment_score
+    return None
+
+
 def format_course_final_grade_ten_scale(student: StudentRecord) -> str:
-    """Rounded course final grade on the configured course grade scale (usually 0–10)."""
-    return get_grading_scale().gradebook_to_course_grade(resolve_override_score(student))
+    """Course final grade (0–10) from the latest thesis assignment score on Canvas."""
+    number = resolve_course_grade_number(student)
+    if number is None:
+        return ""
+    return format_grade_2dp(number)
 
 
 def format_student_final_score_course(student: StudentRecord) -> str:
-    """Final Score expressed on the course grade scale (e.g. 0–10)."""
-    return get_grading_scale().gradebook_to_course_grade(resolve_final_score(student))
+    """1st assignment score on the 0–10 course scale."""
+    if student.first_assignment_score is None:
+        return ""
+    return format_grade_2dp(
+        get_grading_scale().submission_to_course_grade(student.first_assignment_score)
+    )
 
 
 def format_student_override_score_course(student: StudentRecord) -> str:
-    """Override Score expressed on the course grade scale (e.g. 0–10)."""
-    return get_grading_scale().gradebook_to_course_grade(resolve_override_score(student))
+    """2nd assignment score on the 0–10 course scale."""
+    if student.second_assignment_score is None:
+        return ""
+    return format_grade_2dp(
+        get_grading_scale().submission_to_course_grade(student.second_assignment_score)
+    )
 
 
 def format_submission_score_course(score: float | None) -> str:
@@ -77,6 +117,30 @@ def format_submission_score_course(score: float | None) -> str:
     if score is None:
         return ""
     return format_grade_2dp(get_grading_scale().submission_to_course_grade(score))
+
+
+def canvas_gradebook_raw_fields(raw: float | None) -> dict[str, str]:
+    """Raw Canvas gradebook score with scale max and course grade (0–10)."""
+    scale = get_grading_scale()
+    if raw is None:
+        return {"Score": "", "Out of": "", "Grade out of 10": ""}
+    return {
+        "Score": format_grade_2dp(raw),
+        "Out of": format_grade_2dp(scale.gradebook_points_possible),
+        "Grade out of 10": scale.gradebook_to_course_grade(raw),
+    }
+
+
+def canvas_submission_raw_fields(raw: float | None) -> dict[str, str]:
+    """Raw Canvas submission assignment score with scale max and course grade (0–10)."""
+    scale = get_grading_scale()
+    if raw is None:
+        return {"Score": "", "Out of": "", "Grade out of 10": ""}
+    return {
+        "Score": format_grade_2dp(raw),
+        "Out of": format_grade_2dp(scale.submission_points_possible),
+        "Grade out of 10": format_grade_2dp(scale.submission_to_course_grade(raw)),
+    }
 
 
 def gradebook_display_score(student: StudentRecord) -> float | None:
@@ -122,25 +186,16 @@ def apply_last_submission_grade(
 
 
 def resolve_course_grade_number(student: StudentRecord) -> float | None:
-    """Course final grade on the course scale (usually 0–10), for pass/fail and display."""
+    """Course final grade (0–10) from latest thesis assignment — not gradebook total."""
     scale = get_grading_scale()
-
-    override = resolve_override_score(student)
-    if override is not None:
-        return scale.gradebook_to_course_grade_number(override)
-
-    final = resolve_final_score(student)
-    if final is not None:
-        return scale.gradebook_to_course_grade_number(final)
-
-    if student.official_score is None:
+    score = latest_assignment_score(student)
+    if score is None and student.official_score is not None:
+        source = (student.official_score_source or "").casefold()
+        if "submission score" in source:
+            score = student.official_score
+    if score is None:
         return None
-
-    source = (student.official_score_source or "").casefold()
-    if "submission score" in source:
-        return scale.submission_to_course_grade(student.official_score)
-
-    return scale.gradebook_to_course_grade_number(student.official_score)
+    return scale.submission_to_course_grade(score)
 
 
 def choose_official_score(

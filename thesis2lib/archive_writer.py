@@ -11,23 +11,25 @@ from openpyxl.utils import get_column_letter
 
 from thesis2lib.excel_export import records_to_dataframe
 from thesis2lib.models import ArchiveMetadata, ProcessedStudent
-from thesis2lib.scoring import derive_override_score_from_final, resolve_final_score, resolve_override_score
-from thesis2lib.utils import format_gradebook_score_ten_scale, sanitize_folder_name
+from thesis2lib.scoring import (
+    canvas_submission_raw_fields,
+    format_course_final_grade_ten_scale,
+)
+from thesis2lib.utils import sanitize_folder_name
 
 
 def archive_metadata_rows(
     metadata: ArchiveMetadata,
     *,
     thesis_title: str = "",
-    final_score: float | None = None,
-    override_score: float | None = None,
+    first_assignment_score: float | None = None,
+    second_assignment_score: float | None = None,
+    course_final_grade: str = "",
 ) -> list[dict[str, str]]:
     """Return the SOP archive-information fields for library delivery."""
     resolved_title = thesis_title or metadata.thesis_title
-    effective_override = override_score
-    if effective_override is None and final_score is not None:
-        effective_override = derive_override_score_from_final(final_score)
-    course_final = format_gradebook_score_ten_scale(effective_override)
+    first_fields = canvas_submission_raw_fields(first_assignment_score)
+    second_fields = canvas_submission_raw_fields(second_assignment_score)
     rows = [
         {"Field": "Student Name", "Value": metadata.student_name},
         {"Field": "Canvas ID", "Value": metadata.canvas_id},
@@ -38,9 +40,31 @@ def archive_metadata_rows(
         {"Field": "Second-reader Name", "Value": metadata.second_reader_name},
         {"Field": "Third Reader (optional)", "Value": metadata.third_reader_name},
         {"Field": "Submission Date", "Value": metadata.submission_date},
-        {"Field": "Final Score", "Value": format_gradebook_score_ten_scale(final_score)},
-        {"Field": "Override Score", "Value": format_gradebook_score_ten_scale(override_score)},
-        {"Field": "Final Grade", "Value": course_final},
+        {
+            "Field": "1st assignment score",
+            "Value": (
+                f"{first_fields['Score']} / {first_fields['Out of']}"
+                if first_fields["Score"]
+                else ""
+            ),
+        },
+        {
+            "Field": "1st assignment (0-10)",
+            "Value": first_fields["Grade out of 10"],
+        },
+        {
+            "Field": "2nd assignment score",
+            "Value": (
+                f"{second_fields['Score']} / {second_fields['Out of']}"
+                if second_fields["Score"]
+                else ""
+            ),
+        },
+        {
+            "Field": "2nd assignment (0-10)",
+            "Value": second_fields["Grade out of 10"],
+        },
+        {"Field": "Final Grade", "Value": course_final_grade},
     ]
     if resolved_title:
         rows.append({"Field": "Thesis Title", "Value": resolved_title})
@@ -81,8 +105,9 @@ def archive_rows_for_student(
     return archive_metadata_rows(
         minimal_archive_metadata(item),
         thesis_title=thesis_title or item.thesis_title,
-        final_score=resolve_final_score(item.student),
-        override_score=resolve_override_score(item.student),
+        first_assignment_score=item.student.first_assignment_score,
+        second_assignment_score=item.student.second_assignment_score,
+        course_final_grade=format_course_final_grade_ten_scale(item.student),
     )
 
 
@@ -109,8 +134,9 @@ def write_archive_info_file(
     overwrite: bool,
     destination: Path | None = None,
     *,
-    final_score: float | None = None,
-    override_score: float | None = None,
+    first_assignment_score: float | None = None,
+    second_assignment_score: float | None = None,
+    course_final_grade: str = "",
 ) -> Path:
     target = destination or (
         student_folder / f"{sanitize_folder_name(student_id)}_Archive_Info.xlsx"
@@ -122,8 +148,9 @@ def write_archive_info_file(
     df = records_to_dataframe(
         archive_metadata_rows(
             metadata,
-            final_score=final_score,
-            override_score=override_score,
+            first_assignment_score=first_assignment_score,
+            second_assignment_score=second_assignment_score,
+            course_final_grade=course_final_grade,
         )
     )
     with pd.ExcelWriter(target, engine="openpyxl") as writer:

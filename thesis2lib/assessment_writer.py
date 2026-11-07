@@ -13,7 +13,15 @@ from thesis2lib.archive_writer import archive_rows_for_student
 from thesis2lib.excel_export import records_to_dataframe
 from thesis2lib.individual_assessment import final_attempt_individual_data
 from thesis2lib.models import IndividualAssessmentData, IndividualReaderEvaluation, ProcessedStudent
-from thesis2lib.utils import format_grade_2dp, format_grade_display, normalize_reader_overall_grade, sanitize_folder_name
+from thesis2lib.grading_scale import get_grading_scale
+from thesis2lib.scoring import canvas_submission_raw_fields
+from thesis2lib.utils import (
+    format_grade_2dp,
+    format_grade_display,
+    normalize_reader_overall_grade,
+    parse_score,
+    sanitize_folder_name,
+)
 
 
 def final_attempt_label(final_attempt: str | None) -> str:
@@ -82,93 +90,163 @@ def final_reader_sheet_rows(
     ]
 
 
+def _summary_row(
+    *,
+    grade_type: str,
+    attempt_label: str,
+    reader: str,
+    score_fields: dict[str, str],
+    canvas_grade: str = "",
+    source: str,
+) -> dict[str, str]:
+    return {
+        "Grade type": grade_type,
+        "Submission": attempt_label,
+        "Reader": reader,
+        "Score": score_fields.get("Score", ""),
+        "Out of": score_fields.get("Out of", ""),
+        "Grade out of 10": score_fields.get("Grade out of 10", ""),
+        "Canvas grade": canvas_grade,
+        "Source": source,
+    }
+
+
 def grade_summary_rows(item: ProcessedStudent) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     attempt_label = final_attempt_label(item.final_attempt)
+    student = item.student
+
+    if student.first_assignment_score is not None:
+        rows.append(
+            _summary_row(
+                grade_type="1st thesis assignment (Canvas)",
+                attempt_label="1st submission",
+                reader="Assignment",
+                score_fields=canvas_submission_raw_fields(student.first_assignment_score),
+                source="Canvas (1st assignment score)",
+            )
+        )
+    if student.second_assignment_score is not None:
+        rows.append(
+            _summary_row(
+                grade_type="2nd thesis assignment (Canvas)",
+                attempt_label="2nd submission",
+                reader="Assignment",
+                score_fields=canvas_submission_raw_fields(student.second_assignment_score),
+                source="Canvas (2nd assignment score)",
+            )
+        )
+    from thesis2lib.scoring import format_course_final_grade_ten_scale
+
+    course_final = format_course_final_grade_ten_scale(student)
+    if course_final:
+        rows.append(
+            _summary_row(
+                grade_type="Course final (latest assignment)",
+                attempt_label=attempt_label,
+                reader="—",
+                score_fields={
+                    "Score": "",
+                    "Out of": "",
+                    "Grade out of 10": course_final,
+                },
+                source="Latest of 1st/2nd assignment (not gradebook total)",
+            )
+        )
+
     final_individual = final_attempt_individual_data(
         item.final_attempt, item.individual_assessments
     )
 
     if final_individual:
         if final_individual.first_reader and final_individual.first_reader.overall_grade:
+            raw = final_individual.first_reader.overall_grade
+            fields = canvas_submission_raw_fields(parse_score(raw))
+            if not fields["Score"]:
+                fields = {"Score": normalize_reader_overall_grade(raw), "Out of": "", "Grade out of 10": ""}
             rows.append(
-                {
-                    "Grade type": "Individual",
-                    "Submission": attempt_label,
-                    "Reader": "First reader",
-                    "Grade": normalize_reader_overall_grade(
-                        final_individual.first_reader.overall_grade
-                    ),
-                    "Score": "",
-                    "Source": f"Overview ({final_individual.source_sheet})",
-                }
+                _summary_row(
+                    grade_type="Individual (overview)",
+                    attempt_label=attempt_label,
+                    reader="First reader",
+                    score_fields=fields,
+                    source=f"Overview ({final_individual.source_sheet})",
+                )
             )
         if final_individual.second_reader and final_individual.second_reader.overall_grade:
+            raw = final_individual.second_reader.overall_grade
+            fields = canvas_submission_raw_fields(parse_score(raw))
+            if not fields["Score"]:
+                fields = {"Score": normalize_reader_overall_grade(raw), "Out of": "", "Grade out of 10": ""}
             rows.append(
-                {
-                    "Grade type": "Individual",
-                    "Submission": attempt_label,
-                    "Reader": "Second reader",
-                    "Grade": normalize_reader_overall_grade(
-                        final_individual.second_reader.overall_grade
-                    ),
-                    "Score": "",
-                    "Source": f"Overview ({final_individual.source_sheet})",
-                }
+                _summary_row(
+                    grade_type="Individual (overview)",
+                    attempt_label=attempt_label,
+                    reader="Second reader",
+                    score_fields=fields,
+                    source=f"Overview ({final_individual.source_sheet})",
+                )
             )
 
-    if not rows:
+    if not final_individual:
         if item.first_reader_overall_grade:
+            raw = item.first_reader_overall_grade
+            fields = canvas_submission_raw_fields(parse_score(raw))
+            if not fields["Score"]:
+                fields = {"Score": normalize_reader_overall_grade(raw), "Out of": "", "Grade out of 10": ""}
             rows.append(
-                {
-                    "Grade type": "Individual",
-                    "Submission": attempt_label,
-                    "Reader": "First reader",
-                    "Grade": normalize_reader_overall_grade(item.first_reader_overall_grade),
-                    "Score": "",
-                    "Source": "Overview",
-                }
+                _summary_row(
+                    grade_type="Individual (overview)",
+                    attempt_label=attempt_label,
+                    reader="First reader",
+                    score_fields=fields,
+                    source="Overview",
+                )
             )
         if item.second_reader_overall_grade:
+            raw = item.second_reader_overall_grade
+            fields = canvas_submission_raw_fields(parse_score(raw))
+            if not fields["Score"]:
+                fields = {"Score": normalize_reader_overall_grade(raw), "Out of": "", "Grade out of 10": ""}
             rows.append(
-                {
-                    "Grade type": "Individual",
-                    "Submission": attempt_label,
-                    "Reader": "Second reader",
-                    "Grade": normalize_reader_overall_grade(item.second_reader_overall_grade),
-                    "Score": "",
-                    "Source": "Overview",
-                }
+                _summary_row(
+                    grade_type="Individual (overview)",
+                    attempt_label=attempt_label,
+                    reader="Second reader",
+                    score_fields=fields,
+                    source="Overview",
+                )
             )
 
     joint = item.joint_assessment
     if joint:
         summary = joint.summary
-        if summary.consolidated_grade or summary.consolidated_score is not None:
+        if summary.consolidated_score is not None or summary.consolidated_grade:
             rows.append(
-                {
-                    "Grade type": "Joint (consolidated)",
-                    "Submission": attempt_label,
-                    "Reader": "Supervisor",
-                    "Grade": summary.consolidated_grade,
-                    "Score": (
-                        ""
-                        if summary.consolidated_score is None
-                        else format_grade_2dp(summary.consolidated_score)
-                    ),
-                    "Source": "Canvas (final submission rubric)",
-                }
+                _summary_row(
+                    grade_type="Joint (Canvas submission score)",
+                    attempt_label=attempt_label,
+                    reader="Supervisor",
+                    score_fields=canvas_submission_raw_fields(summary.consolidated_score),
+                    canvas_grade=summary.consolidated_grade,
+                    source="Canvas (final submission)",
+                )
             )
         if summary.rubric_points is not None:
             rows.append(
-                {
-                    "Grade type": "Joint (rubric total)",
-                    "Submission": attempt_label,
-                    "Reader": "Supervisor",
-                    "Grade": "",
-                    "Score": format_grade_2dp(summary.rubric_points),
-                    "Source": "Canvas (final submission rubric)",
-                }
+                _summary_row(
+                    grade_type="Joint (Canvas rubric points)",
+                    attempt_label=attempt_label,
+                    reader="Supervisor",
+                    score_fields={
+                        "Score": format_grade_2dp(summary.rubric_points),
+                        "Out of": format_grade_2dp(
+                            get_grading_scale().submission_points_possible
+                        ),
+                        "Grade out of 10": "",
+                    },
+                    source="Canvas (final submission rubric)",
+                )
             )
 
     return rows
@@ -180,24 +258,26 @@ def joint_assessment_rows(item: ProcessedStudent) -> list[dict[str, str]]:
         return []
 
     summary = joint.summary
+    submission_fields = canvas_submission_raw_fields(summary.consolidated_score)
+    scale = get_grading_scale()
     rows: list[dict[str, str]] = [
         {
-            "Criterion": "Consolidated score",
-            "Rating": "",
-            "Points": (
-                ""
-                if summary.consolidated_score is None
-                else format_grade_2dp(summary.consolidated_score)
+            "Criterion": "Consolidated score (Canvas)",
+            "Rating": summary.consolidated_grade,
+            "Points": submission_fields["Score"],
+            "Maximum points": submission_fields["Out of"] or format_grade_2dp(
+                scale.submission_points_possible
             ),
-            "Maximum points": "",
+            "Grade out of 10": submission_fields["Grade out of 10"],
             "Motivation": "",
             "Assessed at": summary.graded_at or summary.assessed_at,
         },
         {
-            "Criterion": "Consolidated grade",
+            "Criterion": "Consolidated grade (Canvas)",
             "Rating": summary.consolidated_grade,
             "Points": "",
             "Maximum points": "",
+            "Grade out of 10": "",
             "Motivation": "",
             "Assessed at": "",
         },
@@ -205,7 +285,8 @@ def joint_assessment_rows(item: ProcessedStudent) -> list[dict[str, str]]:
             "Criterion": "Rubric points total",
             "Rating": "",
             "Points": "" if summary.rubric_points is None else format_grade_2dp(summary.rubric_points),
-            "Maximum points": "",
+            "Maximum points": format_grade_2dp(scale.submission_points_possible),
+            "Grade out of 10": "",
             "Motivation": "",
             "Assessed at": "",
         },
