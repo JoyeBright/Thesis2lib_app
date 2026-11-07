@@ -42,27 +42,51 @@ class GradingScale:
 
     def submission_to_gradebook(self, submission_score: float) -> float:
         """Convert a submission assignment score to the gradebook scale."""
+        bounded = min(max(submission_score, 0.0), self.submission_points_possible)
         return round_grade_2dp(
-            submission_score
+            bounded
             / self.submission_points_possible
             * self.gradebook_points_possible
         )
 
     def submission_to_course_grade(self, submission_score: float) -> float:
-        return round_grade_2dp(
-            submission_score
+        bounded = min(max(submission_score, 0.0), self.submission_points_possible)
+        value = (
+            bounded
             / self.submission_points_possible
             * self.course_grade_points_possible
+        )
+        return self._clamp_course_grade(value)
+
+    def normalize_gradebook_raw(self, gradebook_score: float) -> float:
+        """Map a Canvas gradebook value onto 0–gradebook_points_possible."""
+        score = max(gradebook_score, 0.0)
+        if score <= self.gradebook_points_possible + 0.01:
+            return round_grade_2dp(score)
+        # Gradebook totals are often 0–100 even when the thesis assignment is 0–60.
+        if score <= 100.01:
+            return round_grade_2dp(score / 100.0 * self.gradebook_points_possible)
+        LOGGER.warning(
+            "Gradebook score %g exceeds 100; treating as submission scale then converting.",
+            score,
+        )
+        return self.submission_to_gradebook(score)
+
+    def _clamp_course_grade(self, value: float) -> float:
+        return round_grade_2dp(
+            min(max(value, 0.0), self.course_grade_points_possible)
         )
 
     def gradebook_to_course_grade_number(self, gradebook_score: float | None) -> float | None:
         if gradebook_score is None:
             return None
-        return round_grade_2dp(
-            gradebook_score
+        normalized = self.normalize_gradebook_raw(gradebook_score)
+        value = (
+            normalized
             / self.gradebook_points_possible
             * self.course_grade_points_possible
         )
+        return self._clamp_course_grade(value)
 
     def gradebook_to_course_grade(self, gradebook_score: float | None) -> str:
         number = self.gradebook_to_course_grade_number(gradebook_score)
@@ -205,10 +229,13 @@ def infer_gradebook_points_from_submissions(
 
 
 def gradebook_default_from_submission_max(submission_points: float) -> tuple[float | None, str]:
-    """When Canvas stores course totals on the same scale as the thesis assignment."""
-    for candidate in (10.0, 60.0, 100.0):
-        if abs(submission_points - candidate) < 0.01:
-            return candidate, f"matched thesis assignment max ({candidate:g})"
+    """Default gradebook range when enrolment grades are missing."""
+    if abs(submission_points - 10.0) < 0.01:
+        return 10.0, "thesis assignment 0–10; gradebook assumed 0–10"
+    if abs(submission_points - 60.0) < 0.01:
+        return 100.0, "thesis assignment 0–60; gradebook assumed 0–100 (%)"
+    if abs(submission_points - 100.0) < 0.01:
+        return 100.0, "thesis assignment 0–100; gradebook assumed 0–100"
     return None, ""
 
 
@@ -242,15 +269,44 @@ def resolve_gradebook_points_possible(
         return from_enrollments, enroll_source
 
     if from_enrollments is not None:
-        return from_enrollments, enroll_source
-    if from_submissions is not None:
-        return from_submissions, submission_source
+        gradebook_points = from_enrollments
+        gradebook_source = enroll_source
+    elif from_submissions is not None:
+        gradebook_points = from_submissions
+        gradebook_source = submission_source
+    else:
+        aligned, aligned_source = gradebook_default_from_submission_max(submission_points)
+        if aligned is not None:
+            gradebook_points = aligned
+            gradebook_source = aligned_source
+        else:
+            gradebook_points = DEFAULT_GRADEBOOK_MAX
+            gradebook_source = f"default ({DEFAULT_GRADEBOOK_MAX:g})"
 
-    aligned, aligned_source = gradebook_default_from_submission_max(submission_points)
-    if aligned is not None:
-        return aligned, aligned_source
+    peak = 0.0
+    for enrollment in enrollments or []:
+        grades = enrollment.get("grades") or {}
+        for key in ("override_score", "final_score", "current_score"):
+            score = parse_score(grades.get(key))
+            if score is not None:
+                peak = max(peak, score)
+    for raw in submission_rows or []:
+        score = parse_score(raw.get("score"))
+        if score is not None:
+            peak = max(peak, score)
 
-    return DEFAULT_GRADEBOOK_MAX, f"default ({DEFAULT_GRADEBOOK_MAX:g})"
+    needed = scale_from_peak(peak) if peak > 0 else gradebook_points
+    if peak > gradebook_points + 0.01 and needed > gradebook_points:
+        LOGGER.info(
+            "Raising gradebook scale from %g to %g (scores up to %g seen).",
+            gradebook_points,
+            needed,
+            peak,
+        )
+        gradebook_points = needed
+        gradebook_source = f"{gradebook_source} (raised for peak {peak:g})"
+
+    return gradebook_points, gradebook_source
 
 
 def resolve_course_pass_grade(

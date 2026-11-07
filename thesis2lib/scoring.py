@@ -12,7 +12,8 @@ from thesis2lib.utils import format_grade_2dp, parse_score, round_grade_2dp
 
 def derive_final_score_from_submission(submission_score: float) -> float:
     """Convert a Canvas submission score to the gradebook Final Score scale."""
-    return get_grading_scale().submission_to_gradebook(submission_score)
+    scale = get_grading_scale()
+    return scale.normalize_gradebook_raw(scale.submission_to_gradebook(submission_score))
 
 
 def derive_override_score_from_final(final_score: float) -> float:
