@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from thesis2lib.constants import INDIVIDUAL_CRITERION_PASS_THRESHOLD
+from thesis2lib.grading_scale import get_grading_scale
 from thesis2lib.models import IndividualAssessmentData, IndividualReaderEvaluation, ProcessedStudent
 from thesis2lib.utils import parse_score
 
@@ -76,8 +76,9 @@ def individual_criteria_status(item: ProcessedStudent) -> tuple[str, str]:
     ):
         if evaluation is None:
             continue
+        scale = get_grading_scale()
         for score in reader_criterion_scores(evaluation):
-            if score < INDIVIDUAL_CRITERION_PASS_THRESHOLD:
+            if not scale.raw_score_passes(score):
                 failing.append(f"{label} criterion score {score:g}")
 
     if not failing and not any(
@@ -89,7 +90,11 @@ def individual_criteria_status(item: ProcessedStudent) -> tuple[str, str]:
     if failing:
         return FAIL_LABEL, "; ".join(failing)
 
-    return PASS_LABEL, f"All scored criteria are at least {INDIVIDUAL_CRITERION_PASS_THRESHOLD:g}."
+    scale = get_grading_scale()
+    return (
+        PASS_LABEL,
+        f"All scored criteria meet the pass rule (course pass >= {scale.course_pass_grade:g}).",
+    )
 
 
 def joint_grade_value(item: ProcessedStudent) -> float | None:
@@ -99,7 +104,7 @@ def joint_grade_value(item: ProcessedStudent) -> float | None:
     summary = joint.summary
     for raw in (summary.consolidated_grade, summary.consolidated_score):
         score = parse_score(raw)
-        if score is not None and score <= 10:
+        if score is not None:
             return score
     return None
 
@@ -113,9 +118,14 @@ def joint_grade_status(item: ProcessedStudent) -> tuple[str, str]:
 
     score = joint_grade_value(item)
     if score is None:
-        return NOT_APPLICABLE, "Joint consolidated grade is missing or not on the 0-10 scale."
+        return NOT_APPLICABLE, "Joint consolidated grade is missing."
 
-    if score < INDIVIDUAL_CRITERION_PASS_THRESHOLD:
-        return FAIL_LABEL, f"Joint consolidated grade {score:g} is below {INDIVIDUAL_CRITERION_PASS_THRESHOLD:g}."
+    scale = get_grading_scale()
+    if not scale.raw_score_passes(score):
+        threshold = scale.pass_threshold_for_raw_score(score)
+        return (
+            FAIL_LABEL,
+            f"Joint consolidated grade {score:g} is below pass ({threshold:g} on this scale).",
+        )
 
-    return PASS_LABEL, f"Joint consolidated grade {score:g} meets the pass threshold."
+    return PASS_LABEL, f"Joint consolidated grade {score:g} meets the pass rule."

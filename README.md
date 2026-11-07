@@ -13,6 +13,24 @@ Set `canvas_url`, `course_id`, assignment IDs, `output_folder`, `programme`, and
 Overview workbook sheets: `Matching_<semester>`, `Grading_1st`, `Grading_2nd`.  
 Use `--prompt-for-token` for the Canvas token (never put it in `config.yml`).
 
+### Grading scales
+
+Programmes mix **0–10**, **0–60**, and **0–100** sources. Thesis2Lib normalises everything to a **course grade (usually 0–10)** and uses **`course_pass_grade: 5.5`** for pass/fail.
+
+Scales are resolved twice: once at validation, then again after submission scores are loaded (more accurate).
+
+| Range | How it is found |
+|--------|------------------|
+| **Submission** (thesis assignment) | Canvas API `points_possible` on the 2nd (then 1st) assignment |
+| **Gradebook** (Final/Override) | Highest grades in enrolments and submission scores → **10**, **60**, or **100**; else same as submission max |
+| **Course grade** (library display) | `course_grade_max` (default **10**) |
+
+Pass **5.5** on 0–10 maps automatically (e.g. **33/60** on a 0–60 assignment). The log line shows all three cut-offs.
+
+Optional overrides in `config.yml`: `submission_score_max`, `gradebook_score_max`, `course_grade_max`, `course_pass_grade`.
+
+Outputs that show **Final Score / Override Score / course final grade** use the **0–10 course scale** after conversion.
+
 ## Run
 
 ```bash

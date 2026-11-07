@@ -253,14 +253,22 @@ class CanvasClient:
         except json.JSONDecodeError as exc:
             raise CanvasAPIError("Canvas returned invalid JSON for course.") from exc
 
-    def validate_assignment(self, course_id: int, assignment_id: int) -> None:
+    def get_assignment(self, course_id: int, assignment_id: int) -> dict:
         response = self._request(
             "GET",
             f"/api/v1/courses/{course_id}/assignments/{assignment_id}",
         )
         try:
-            response.json()
+            payload = response.json()
         except json.JSONDecodeError as exc:
             raise CanvasAPIError(
                 f"Canvas returned invalid JSON for assignment {assignment_id}."
             ) from exc
+        if not isinstance(payload, dict):
+            raise CanvasAPIError(
+                f"Canvas assignment {assignment_id} response was not a JSON object."
+            )
+        return payload
+
+    def validate_assignment(self, course_id: int, assignment_id: int) -> None:
+        self.get_assignment(course_id, assignment_id)

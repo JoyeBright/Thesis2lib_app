@@ -704,9 +704,9 @@ def format_submission_date(value: str | None) -> str:
 
 
 def format_official_grade(score: float | None) -> str:
-    from thesis2lib.utils import format_gradebook_score_ten_scale
+    from thesis2lib.grading_scale import get_grading_scale
 
-    return format_gradebook_score_ten_scale(score)
+    return get_grading_scale().gradebook_to_course_grade(score)
 
 
 def enrich_archive_metadata(

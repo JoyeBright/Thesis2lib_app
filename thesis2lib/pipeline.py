@@ -259,7 +259,6 @@ def process_students(
     second_submissions: dict[str, SubmissionRecord],
     first_pdfs: list[Path],
     second_pdfs: list[Path],
-    pass_threshold: float,
     assessment_workbook: dict[str, list[AssessmentRow]] | None,
     assessment_workbook_provided: bool,
     overview_workbook: OverviewWorkbook | None,
@@ -270,7 +269,7 @@ def process_students(
     progress = ConsoleProgress(len(enrollments), "Processing students") if enrollments else None
 
     for enrollment in enrollments:
-        student = build_student_record(enrollment, pass_threshold)
+        student = build_student_record(enrollment)
         first = first_submissions.get(student.canvas_id)
         second = second_submissions.get(student.canvas_id)
 
@@ -280,11 +279,10 @@ def process_students(
             fill_missing_gradebook_scores,
         )
 
-        result_threshold, pass_above_threshold = apply_last_submission_grade(
+        apply_last_submission_grade(
             student,
             first.raw if first else None,
             second.raw if second else None,
-            pass_threshold,
         )
 
         if student.final_score is None or student.override_score is None:
@@ -296,11 +294,9 @@ def process_students(
                 fill_missing_gradebook_scores(student, submission_score)
 
         student.course_result = determine_course_result(
-            student.official_score,
+            student,
             first.raw if first else None,
             second.raw if second else None,
-            result_threshold,
-            pass_above_threshold=pass_above_threshold,
         )
         final_attempt = choose_final_attempt(
             first.raw if first else None,

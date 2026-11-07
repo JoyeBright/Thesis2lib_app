@@ -34,6 +34,11 @@ from thesis2lib.excel_export import records_to_dataframe, sanitize_dataframe
 from thesis2lib.models import ProcessedStudent, SubmissionRecord
 from thesis2lib.package_writer import delivery_package_is_eligible, pdf_package_is_eligible
 from thesis2lib.submissions import has_real_submission
+from thesis2lib.scoring import (
+    format_student_final_score_course,
+    format_student_override_score_course,
+    format_submission_score_course,
+)
 from thesis2lib.utils import format_grade_2dp
 
 
@@ -54,7 +59,7 @@ def submission_score_label(
         return ""
     if submission is None or submission.score is None:
         return ""
-    return format_grade_2dp(submission.score)
+    return format_submission_score_course(submission.score)
 
 
 def submission_date_label(
@@ -223,8 +228,8 @@ def student_report_row(item: ProcessedStudent) -> dict[str, Any]:
             not_applicable=second_not_applicable,
         ),
         "Final attempt": item.final_attempt or "",
-        "Final Score": format_grade_2dp(item.student.final_score),
-        "Override Score": format_grade_2dp(item.student.override_score),
+        "Final Score": format_student_final_score_course(item.student),
+        "Override Score": format_student_override_score_course(item.student),
         "Course Result": item.student.course_result,
         "PDF source": pdf.pdf_source if pdf else "",
         "Canvas attachment names": "; ".join(pdf.canvas_attachment_names) if pdf else "",

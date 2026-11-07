@@ -9,7 +9,13 @@ second_assignment_id: 156731
 
 programme: MSc_DSS
 semester: F2025
-pass_threshold: 60
+# Passing course final grade (library scale is usually 0–10):
+course_pass_grade: 5.5
+# Ranges (optional — auto-detected from Canvas when omitted):
+# submission_score_max: 60   # assignment points_possible
+# gradebook_score_max: 100    # Final/Override in gradebook (10, 60, or 100)
+# course_grade_max: 10
+# pass_threshold: 60          # legacy gradebook % only if course_pass_grade is omitted
 
 # Optional folder paths (can also be passed on the command line):
 # first_pdf_folder: /path/to/First Submission

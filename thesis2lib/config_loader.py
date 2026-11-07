@@ -43,6 +43,21 @@ CONFIG_FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "programme": ("programme", "program"),
     "semester": ("semester",),
     "pass_threshold": ("pass_threshold",),
+    "course_pass_grade": ("course_pass_grade", "grading.course_pass_grade"),
+    "submission_score_max": (
+        "submission_score_max",
+        "submission_points_possible",
+        "grading.submission_score_max",
+    ),
+    "gradebook_score_max": (
+        "gradebook_score_max",
+        "grading.gradebook_score_max",
+    ),
+    "course_grade_max": (
+        "course_grade_max",
+        "course_grade_scale_max",
+        "grading.course_grade_max",
+    ),
     "download_workers": ("download_workers",),
     "title_workers": ("title_workers",),
     "first_pdf_folder": ("first_pdf_folder", "paths.first_pdf_folder"),

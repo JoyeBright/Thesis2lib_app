@@ -102,6 +102,22 @@ def main(argv: list[str] | None = None) -> int:
                 f"{len(first_submissions)} first, {len(second_submissions)} second"
             )
 
+        from thesis2lib.grading_scale import configure_grading_scale
+
+        configure_grading_scale(
+            submission_score_max=args.submission_score_max,
+            gradebook_score_max=args.gradebook_score_max,
+            course_grade_max=args.course_grade_max,
+            course_pass_grade=args.course_pass_grade,
+            pass_threshold=args.pass_threshold,
+            client=client,
+            course_id=args.course_id,
+            first_assignment_id=args.first_assignment_id,
+            second_assignment_id=args.second_assignment_id,
+            enrollments=enrollments,
+            submission_rows=[*first_raw, *second_raw],
+        )
+
         assessment_workbook = None
         if assessment_workbook_provided:
             step += 1
@@ -127,7 +143,6 @@ def main(argv: list[str] | None = None) -> int:
                 second_submissions,
                 first_pdfs,
                 second_pdfs,
-                args.pass_threshold,
                 assessment_workbook,
                 assessment_workbook_provided,
                 overview_workbook,

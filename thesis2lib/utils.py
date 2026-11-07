@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from thesis2lib.constants import BLANK_MARKERS, INVALID_FILENAME_CHARS, SUBMISSION_SCORE_MAX
+from thesis2lib.constants import BLANK_MARKERS, INVALID_FILENAME_CHARS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,23 +85,26 @@ def format_grade_display(value: Any) -> str:
 
 
 def format_course_final_grade(score: float | None) -> str:
-    """Course final grade from Override Score on the 0–100 scale."""
-    return format_grade_2dp(score)
+    """Format a gradebook-scale score as the course final grade (usually 0–10)."""
+    return format_gradebook_score_ten_scale(score)
 
 
 def format_gradebook_score_ten_scale(score: float | None) -> str:
-    """Convert a 0–100 gradebook score to the 0–10 course grade scale."""
-    if score is None:
-        return ""
-    return format_grade_2dp(score / 10.0)
+    """Convert a gradebook-scale score to the course final grade scale (usually 0–10)."""
+    from thesis2lib.grading_scale import get_grading_scale
+
+    return get_grading_scale().gradebook_to_course_grade(score)
 
 
 def normalize_reader_overall_grade(raw: Any) -> str:
-    """Individual reader overall grades are on 0–60; cap and format to 2 decimals."""
+    """Individual reader overall grades use the submission assignment scale."""
+    from thesis2lib.grading_scale import get_grading_scale
+
     score = parse_score(raw)
     if score is None:
         return clean_text(raw)
-    capped = min(max(score, 0.0), SUBMISSION_SCORE_MAX)
+    scale = get_grading_scale()
+    capped = scale.cap_submission_score(score)
     return format_grade_2dp(capped)
 
 

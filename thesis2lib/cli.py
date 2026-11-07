@@ -125,13 +125,42 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Optional local assessment workbook (.xlsx).",
     )
     parser.add_argument(
+        "--course-pass-grade",
+        type=float,
+        default=config_defaults.get("course_pass_grade"),
+        help="Passing course final grade (default: 5.5 on the 0–10 scale).",
+    )
+    parser.add_argument(
         "--pass-threshold",
         type=float,
         default=config_defaults.get("pass_threshold", DEFAULT_PASS_THRESHOLD),
         help=(
-            f"Pass threshold for gradebook Final/Override Score. "
-            f"Default: {DEFAULT_PASS_THRESHOLD}."
+            "Legacy: gradebook pass %% (e.g. 60). Prefer course_pass_grade: 5.5 in config."
         ),
+    )
+    parser.add_argument(
+        "--submission-score-max",
+        type=float,
+        default=config_defaults.get("submission_score_max"),
+        help=(
+            "Max points on thesis submission assignments. "
+            "Default: read from Canvas assignment points_possible."
+        ),
+    )
+    parser.add_argument(
+        "--gradebook-score-max",
+        type=float,
+        default=config_defaults.get("gradebook_score_max"),
+        help=(
+            "Max for Canvas Final/Override Score in the gradebook (often 100; "
+            "set if your course uses another scale)."
+        ),
+    )
+    parser.add_argument(
+        "--course-grade-max",
+        type=float,
+        default=config_defaults.get("course_grade_max"),
+        help="Max for library course final grade display (default: 10).",
     )
     parser.add_argument(
         "--prompt-for-token",
@@ -315,6 +344,22 @@ def validate_runtime(
 
     version = ensure_tesseract_available()
     logging.info("Tesseract OCR available (version %s).", version)
+
+    from thesis2lib.grading_scale import configure_grading_scale
+
+    configure_grading_scale(
+        submission_score_max=args.submission_score_max,
+        gradebook_score_max=args.gradebook_score_max,
+        course_grade_max=args.course_grade_max,
+        course_pass_grade=args.course_pass_grade,
+        pass_threshold=args.pass_threshold,
+        client=client,
+        course_id=args.course_id,
+        first_assignment_id=args.first_assignment_id,
+        second_assignment_id=args.second_assignment_id,
+        enrollments=enrollments,
+        submission_rows=None,
+    )
 
     return client, enrollments
 

@@ -107,7 +107,7 @@ def submission_map(
     return mapping
 
 
-def build_student_record(enrollment: dict, pass_threshold: float) -> StudentRecord:
+def build_student_record(enrollment: dict) -> StudentRecord:
     user = enrollment.get("user") or {}
     grades = enrollment.get("grades") or {}
     canvas_id = normalize_identifier(user.get("id") or enrollment.get("user_id"))
