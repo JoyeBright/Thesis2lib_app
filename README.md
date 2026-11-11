@@ -80,7 +80,8 @@ Use `--no-interactive-review` to skip prompts and apply `manual_decisions.yml` o
 | `Archive/` | All submission PDFs + gradebook |
 | `Open Access – …/` | One thesis PDF per ready passed student |
 | `SOP/` | Thesis + assessments per student |
-| `Processing_Report.xlsx` | Status per student |
+| `Processing_Report.xlsx` | Status per student (includes overview supervisor / reader names on the Students sheet) |
+| `<semester>_<programme>_Graduates_Report.xlsx` | Passed graduates for Open Access (supervisor / reader names from overview) |
 | `Manual/manual_decisions.yml` | Title catalog + manual SNR/PDF/title choices |
 
 ## Useful flags

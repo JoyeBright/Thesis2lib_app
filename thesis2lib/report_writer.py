@@ -32,6 +32,11 @@ from thesis2lib.grading_checks import (
 )
 from thesis2lib.excel_export import records_to_dataframe, sanitize_dataframe
 from thesis2lib.models import ProcessedStudent, SubmissionRecord
+from thesis2lib.overview_names import (
+    overview_first_reader_name,
+    overview_second_reader_name,
+    overview_supervisor_name,
+)
 from thesis2lib.package_writer import delivery_package_is_eligible, pdf_package_is_eligible
 from thesis2lib.submissions import has_real_submission
 from thesis2lib.scoring import (
@@ -259,9 +264,12 @@ def student_report_row(item: ProcessedStudent) -> dict[str, Any]:
         "Individual criteria pass": individual_status,
         "Individual criteria detail": individual_detail,
         "Supervisor name found": assessment_found_label(item, item.supervisor_name_found),
+        "Supervisor (overview)": overview_supervisor_name(item),
+        "First reader (overview)": overview_first_reader_name(item),
         "Second reader name found": assessment_found_label(
             item, item.second_reader_name_found
         ),
+        "Second reader (overview)": overview_second_reader_name(item),
         "Joint assessment found": assessment_found_label(item, item.joint_assessment_found),
         "Joint grade pass": joint_status,
         "Joint grade detail": joint_detail,

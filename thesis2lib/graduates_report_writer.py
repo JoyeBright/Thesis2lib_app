@@ -18,6 +18,11 @@ from thesis2lib.delivery import (
 )
 from thesis2lib.excel_export import records_to_dataframe
 from thesis2lib.models import ProcessedStudent
+from thesis2lib.overview_names import (
+    overview_first_reader_name,
+    overview_second_reader_name,
+    overview_supervisor_name,
+)
 from thesis2lib.package_writer import delivery_package_is_eligible
 
 
@@ -53,6 +58,9 @@ def graduates_report_rows(
                 "SIS User ID": item.student.sis_user_id,
                 "Final attempt": item.final_attempt or "",
                 "Course final grade": resolve_final_grade(item),
+                "Supervisor (overview)": overview_supervisor_name(item),
+                "First reader (overview)": overview_first_reader_name(item),
+                "Second reader (overview)": overview_second_reader_name(item),
                 "Thesis title": item.thesis_title if package_created else "",
                 "Thesis PDF": pdf_name,
                 "Open Access folder": open_access_folder.name if package_created else "",
